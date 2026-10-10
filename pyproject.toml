@@ -25,6 +25,9 @@ dev = [
     "pytest>=8,<10",
 ]
 
+[project.scripts]
+dwt-textcnn = "dwt_textcnn.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

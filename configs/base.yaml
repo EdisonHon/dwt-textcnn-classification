@@ -1,0 +1,61 @@
+project:
+  name: dwt-textcnn-classification
+  dataset: sst2
+
+experiment:
+  name: base
+  seeds: [13, 21, 42, 87, 100]
+
+data:
+  source_url: https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip
+  archive_sha256: 5c613a4f673fc74097d523a2c83f38e0cc462984d847b82c7aaf36b01cbbbfcc
+  source_dir: null
+  vocabulary_scope: paper-compatible
+  special_tokens:
+    pad: <pad>
+    unk: <unk>
+  minimum_sequence_length: 7
+
+embedding:
+  method: original
+  dimension: 300
+  dtype: float32
+  word2vec_path: null
+  word2vec_md5: a5e5354d40acb95f9ec66d5977d140ef
+  pretrained_trainable: true
+  random_trainable: true
+  dwt:
+    wavelet: coif1
+    level: 1
+    mode: periodization
+    coefficient: cA
+  pca:
+    n_components: 150
+    whiten: false
+    svd_solver: full
+
+model:
+  kernel_sizes: [5, 6, 7]
+  filters_per_size: 100
+  dropout: 0.5
+  num_classes: 2
+
+training:
+  batch_size: 50
+  max_epochs: 30
+  optimizer:
+    name: adadelta
+    learning_rate: 1.0
+    rho: 0.95
+    eps: 1.0e-6
+  early_stopping:
+    metric: accuracy
+    patience: 5
+  deterministic: true
+
+evaluation:
+  metrics: [accuracy, macro_f1]
+
+paths:
+  data_dir: data
+  output_dir: outputs

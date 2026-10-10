@@ -38,6 +38,40 @@ python -m pip install --force-reinstall --no-deps "torch==2.14.1+cu130" `
 experiments on a different PyTorch build only when the build and device are
 captured in the generated environment manifest.
 
+## Command line interface
+
+The project exposes one command with six staged operations:
+
+```powershell
+dwt-textcnn --help
+dwt-textcnn prepare-data --help
+dwt-textcnn prepare-embeddings --help
+dwt-textcnn train --help
+dwt-textcnn evaluate --help
+dwt-textcnn benchmark --help
+dwt-textcnn summarize --help
+```
+
+Method configurations inherit the fixed experiment protocol from
+`configs/base.yaml`. They can be resolved and validated before the relevant
+implementation phase is complete:
+
+```powershell
+dwt-textcnn train --config configs/original.yaml --check-config
+dwt-textcnn train --config configs/dwt_ca.yaml --check-config
+```
+
+Operations that belong to later phases currently report that status explicitly
+instead of presenting placeholder output as an experiment result.
+
+## Development checks
+
+Run the test suite from the repository root:
+
+```powershell
+python -m pytest
+```
+
 ## External data
 
 SST-2 data, pretrained embeddings, generated caches, checkpoints, and experiment

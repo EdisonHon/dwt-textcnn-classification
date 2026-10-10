@@ -1,0 +1,10 @@
+extends: base.yaml
+
+experiment:
+  name: dwt_cd
+
+embedding:
+  method: dwt_cd
+  dimension: 150
+  dwt:
+    coefficient: cD

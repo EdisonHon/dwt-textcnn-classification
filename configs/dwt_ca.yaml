@@ -1,0 +1,10 @@
+extends: base.yaml
+
+experiment:
+  name: dwt_ca
+
+embedding:
+  method: dwt_ca
+  dimension: 150
+  dwt:
+    coefficient: cA

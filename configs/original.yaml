@@ -1,0 +1,8 @@
+extends: base.yaml
+
+experiment:
+  name: original
+
+embedding:
+  method: original
+  dimension: 300

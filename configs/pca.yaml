@@ -1,0 +1,8 @@
+extends: base.yaml
+
+experiment:
+  name: pca
+
+embedding:
+  method: pca
+  dimension: 150
