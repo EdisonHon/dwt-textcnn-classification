@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dwt-textcnn-classification"
+version = "0.1.0"
+description = "Reproducible SST-2 MCCNN experiments with DWT and PCA embedding compression."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "gensim>=4.3,<5",
+    "nltk>=3.8,<4",
+    "numpy>=1.26,<3",
+    "pandas>=2.2,<4",
+    "psutil>=5.9,<8",
+    "PyWavelets>=1.5,<2",
+    "PyYAML>=6,<7",
+    "scikit-learn>=1.4,<2",
+    "torch>=2.2,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<10",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

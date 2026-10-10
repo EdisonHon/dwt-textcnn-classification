@@ -1,0 +1,36 @@
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Local tooling and editors
+.idea/
+.vscode/
+*.code-workspace
+
+# Datasets, pretrained embeddings, caches, and experiment artifacts
+data/*
+!data/README.md
+outputs/
+checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.bin.gz
+*.npy
+*.npz
+
+# OS-generated files
+.DS_Store
+Thumbs.db
