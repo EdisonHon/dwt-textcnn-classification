@@ -6,8 +6,9 @@ file.
 
 Expected external inputs include:
 
-- Stanford `stanfordnlp/sentiment-treebank` binary SST tree files from a fixed
-  Git commit.
+- Stanford NLP's original 2013 `trainDevTestTrees_PTB.zip` SST tree release,
+  fixed by its SHA-256 checksum. The later Git repository is not used because
+  its split counts differ from the reference paper.
 - Google News Word2Vec 300-dimensional vectors, obtained separately and never
   committed to this repository.
 

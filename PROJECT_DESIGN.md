@@ -46,21 +46,25 @@ DWT 论文没有公开每项实验使用的具体母小波。本文档选择 `co
 
 ### 3.1 数据来源
 
-使用 Stanford NLP 官方维护的 `stanfordnlp/sentiment-treebank` 仓库中 `binary/` 目录的 SST 二分类树文件：
+使用 Stanford NLP 官方发布的 2013 年原始 PTB 划分压缩包 `trainDevTestTrees_PTB.zip`：
 
-- `train-binary.txt`
-- `dev-binary.txt`
-- `test-binary.txt`
+- 来源：`https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip`
+- 固定压缩包 SHA-256：`5c613a4f673fc74097d523a2c83f38e0cc462984d847b82c7aaf36b01cbbbfcc`
+- 使用压缩包 `trees/` 目录中的树文件：
 
-不使用 Hugging Face/GLUE 中包含 67,349 个短语级训练样本且隐藏测试标签的版本，也不重新划分数据。
+  - `train.txt`
+  - `dev.txt`
+  - `test.txt`
+
+不使用 Hugging Face/GLUE 中包含 67,349 个短语级训练样本且隐藏测试标签的版本，也不重新划分数据。也不使用后续维护的 `stanfordnlp/sentiment-treebank` Git 仓库版本：其当前固定提交的二分类根节点计数为 6,921/872/1,818，与参考论文的 6,920/872/1,821 不一致。
 
 ### 3.2 数据解析
 
 - 每棵树只提取根节点，得到完整句子；
 - 叶节点序列直接作为已分词的 token 序列；
-- 根节点为负面时映射为标签 0；
-- 根节点为正面时映射为标签 1；
-- 忽略根节点标签为 `-1` 的中性句子；
+- 根节点原始标签为 `0` 或 `1` 时映射为负面标签 0；
+- 根节点原始标签为 `3` 或 `4` 时映射为正面标签 1；
+- 忽略根节点原始标签为 `2` 的中性句子；
 - 不进行额外 tokenization、stemming、lemmatization 或停用词删除；
 - 保留原始大小写和标点。
 
@@ -72,7 +76,7 @@ DWT 论文没有公开每项实验使用的具体母小波。本文档选择 `co
 | Dev | 872 |
 | Test | 1,821 |
 
-这与 CNN 参考论文表 1 中的 SST-2 数量一致。数据来源的 Git commit 或等价版本标识必须写入运行记录。
+这与 CNN 参考论文表 1 中的 SST-2 数量一致。数据来源 URL、原始压缩包 SHA-256 和各拆分文件 SHA-256 必须写入运行记录。
 
 ### 3.3 词表
 
@@ -286,7 +290,7 @@ Difference: our mean - 88.1%
 项目提供统一命令入口，至少覆盖：
 
 ```text
-prepare-data        下载或解析固定版本的 SST binary，并验证样本数量
+prepare-data        下载或解析固定的 2013 SST PTB 划分，并验证样本数量
 prepare-embeddings  加载 Word2Vec，生成 Original、DWT 和 PCA 缓存
 train               按配置训练一个实验和一个 seed
 evaluate            加载最佳 checkpoint 评估分类指标
@@ -408,7 +412,7 @@ outputs/sst2/<method>/<seed>/<run-id>/
 ## 14. 实施顺序
 
 1. 建立 Python 包、配置、测试和命令入口；
-2. 实现并验证 Stanford SST binary 解析与固定词表；
+2. 实现并验证 Stanford 2013 SST PTB 树解析与固定词表；
 3. 实现 Word2Vec 加载和 Original 嵌入缓存；
 4. 实现 MCCNN，并用单 seed 完成基准冒烟实验；
 5. 调试 MCCNN 基准并与论文 88.1% 进行初步比较；
@@ -423,6 +427,7 @@ outputs/sst2/<method>/<seed>/<run-id>/
 
 - CNN 论文没有完整公开所有训练和初始化细节，无法保证数值完全一致；
 - DWT 论文没有公开每项实验的具体母小波，`coif1` 是本项目固定选择；
+- 后续维护的 Stanford SST Git 仓库与 2013 原始发布包存在样本差异；本项目固定使用原始发布包，不自动跟随仓库更新；
 - 两个嵌入通道均训练可能逐步改变初始压缩表示，但所有方法保持一致；
 - 使用全部 split 文本建立词表属于论文兼容设置，不是最严格的 train-only 词表；
 - PCA 的中心化会使零向量投影为非零，因此必须显式重置 `<pad>`；

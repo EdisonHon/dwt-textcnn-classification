@@ -41,7 +41,9 @@ captured in the generated environment manifest.
 ## External data
 
 SST-2 data, pretrained embeddings, generated caches, checkpoints, and experiment
-outputs are intentionally excluded from Git. Google News Word2Vec must be
+outputs are intentionally excluded from Git. The project uses Stanford NLP's
+original 2013 `trainDevTestTrees_PTB.zip` release because its binary root counts
+(6,920/872/1,821) match the reference paper. Google News Word2Vec must be
 obtained separately and supplied to the preparation command through a local
 path. The project must record source versions and checksums in run manifests.
 
