@@ -65,3 +65,18 @@ def test_cyclic_inheritance_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(ConfigError, match="Cyclic configuration inheritance"):
         load_config(first)
+
+
+def test_all_methods_share_the_same_data_model_and_training_protocol() -> None:
+    configs = [
+        load_config(PROJECT_ROOT / "configs" / f"{method}.yaml")
+        for method in ("original", "dwt_ca", "dwt_cd", "pca")
+    ]
+    reference = configs[0]
+
+    for config in configs[1:]:
+        assert config["data"] == reference["data"]
+        assert config["model"] == reference["model"]
+        assert config["training"] == reference["training"]
+        assert config["evaluation"] == reference["evaluation"]
+        assert config["experiment"]["seeds"] == reference["experiment"]["seeds"]

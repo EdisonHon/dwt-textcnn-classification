@@ -19,7 +19,7 @@ from torch.optim import Adadelta
 from torch.utils.data import DataLoader
 
 from dwt_textcnn.data import EncodedSSTDataset, SSTBatchCollator, sha256_file
-from dwt_textcnn.embeddings import load_original_embedding_cache
+from dwt_textcnn.embeddings import load_embedding_cache
 from dwt_textcnn.evaluation import evaluate_model
 from dwt_textcnn.models.mccnn import MCCNN
 from dwt_textcnn.reproducibility import capture_environment, seed_everything
@@ -106,9 +106,26 @@ def _save_checkpoint(
     )
 
 
-def load_checkpoint(path: str | Path, model: MCCNN, device: torch.device) -> dict[str, Any]:
+def load_checkpoint(
+    path: str | Path,
+    model: MCCNN,
+    device: torch.device,
+    *,
+    expected_method: str | None = None,
+    expected_seed: int | None = None,
+) -> dict[str, Any]:
     try:
         checkpoint = torch.load(path, map_location=device, weights_only=True)
+        if checkpoint.get("schema_version") != 1:
+            raise TrainingError("Unsupported checkpoint schema")
+        if expected_method is not None and checkpoint.get("method") != expected_method:
+            raise TrainingError(
+                f"Checkpoint method is {checkpoint.get('method')}, expected {expected_method}"
+            )
+        if expected_seed is not None and checkpoint.get("seed") != expected_seed:
+            raise TrainingError(
+                f"Checkpoint seed is {checkpoint.get('seed')}, expected {expected_seed}"
+            )
         model.load_state_dict(checkpoint["model_state"])
     except (FileNotFoundError, KeyError, RuntimeError, TypeError, ValueError) as exc:
         raise TrainingError(f"Invalid checkpoint {path}: {exc}") from exc
@@ -129,6 +146,22 @@ def _parameter_profile(model: MCCNN) -> dict[str, int]:
         "trainable_parameters": sum(
             parameter.numel() for parameter in model.parameters() if parameter.requires_grad
         ),
+    }
+
+
+def _parameter_byte_profile(model: MCCNN) -> dict[str, int]:
+    def size(module: nn.Module) -> int:
+        return sum(
+            parameter.numel() * parameter.element_size()
+            for parameter in module.parameters()
+        )
+
+    return {
+        "pretrained_embedding_bytes": size(model.pretrained_embedding),
+        "random_embedding_bytes": size(model.random_embedding),
+        "convolution_bytes": size(model.convolutions),
+        "classifier_bytes": size(model.classifier),
+        "total_parameter_bytes": size(model),
     }
 
 
@@ -158,10 +191,9 @@ def train_experiment(
     max_epochs: int | None = None,
     limit_train_batches: int | None = None,
 ) -> tuple[Path, dict[str, Any]]:
-    """Train one Original experiment and evaluate its best checkpoint."""
+    """Train one configured embedding method and evaluate its best checkpoint."""
 
-    if config["embedding"]["method"] != "original":
-        raise TrainingError("Phase 4 training supports the Original method only")
+    method = config["embedding"]["method"]
     if seed not in config["experiment"]["seeds"]:
         raise TrainingError(f"Seed {seed} is not in the configured formal seed set")
     if max_epochs is not None and max_epochs < 1:
@@ -175,12 +207,19 @@ def train_experiment(
     data_manifest = json.loads((data_dir / "data_manifest.json").read_text(encoding="utf-8"))
     if data_manifest["vocabulary"]["sha256"] != vocabulary.sha256:
         raise TrainingError("Prepared vocabulary does not match its data manifest")
-    pretrained_matrix, _, embedding_manifest = load_original_embedding_cache(
-        embedding_dir, expected_vocabulary_sha256=vocabulary.sha256
+    pretrained_matrix, _, embedding_manifest = load_embedding_cache(
+        embedding_dir,
+        expected_method=method,
+        expected_vocabulary_sha256=vocabulary.sha256,
     )
     if embedding_manifest["seed"] != seed:
         raise TrainingError(
             f"Embedding seed is {embedding_manifest['seed']}, requested training seed is {seed}"
+        )
+    expected_shape = (len(vocabulary), config["embedding"]["dimension"])
+    if pretrained_matrix.shape != expected_shape:
+        raise TrainingError(
+            f"Embedding matrix shape is {pretrained_matrix.shape}, expected {expected_shape}"
         )
 
     datasets = {
@@ -320,7 +359,13 @@ def train_experiment(
 
     _synchronize(device)
     training_seconds = time.perf_counter() - training_started
-    checkpoint = load_checkpoint(checkpoint_path, model, device)
+    checkpoint = load_checkpoint(
+        checkpoint_path,
+        model,
+        device,
+        expected_method=method,
+        expected_seed=seed,
+    )
     dev_metrics = evaluate_model(model, dev_loader, device, criterion)
     test_metrics = evaluate_model(model, test_loader, device, criterion)
 
@@ -348,9 +393,16 @@ def train_experiment(
 
     profile = {
         "schema_version": 1,
-        "status": "phase-4-model-size-only",
+        "status": "model-size",
         "device": str(device),
+        "embedding_dimension": config["embedding"]["dimension"],
+        "embedding_compression_ratio_from_300d": 1.0
+        - config["embedding"]["dimension"] / 300,
+        "embedding_cache_size_bytes": (
+            embedding_dir / "pretrained.npy"
+        ).stat().st_size,
         "parameters": _parameter_profile(model),
+        "parameter_bytes": _parameter_byte_profile(model),
         "checkpoint_size_bytes": checkpoint_path.stat().st_size,
         "checkpoint_sha256": sha256_file(checkpoint_path),
     }
@@ -397,11 +449,22 @@ def evaluate_saved_run(
     seed_everything(seed, deterministic=config["training"]["deterministic"])
     device = resolve_device(device_name)
     vocabulary = Vocabulary.load(data_dir / "vocabulary.json")
-    pretrained_matrix, _, _ = load_original_embedding_cache(
-        embedding_dir, expected_vocabulary_sha256=vocabulary.sha256
+    method = config["embedding"]["method"]
+    pretrained_matrix, _, embedding_manifest = load_embedding_cache(
+        embedding_dir,
+        expected_method=method,
+        expected_vocabulary_sha256=vocabulary.sha256,
     )
+    if embedding_manifest["seed"] != seed:
+        raise TrainingError("Saved embedding cache seed does not match the run")
     model = build_mccnn(config, pretrained_matrix, vocabulary.pad_id).to(device)
-    checkpoint = load_checkpoint(run / "best_model.pt", model, device)
+    checkpoint = load_checkpoint(
+        run / "best_model.pt",
+        model,
+        device,
+        expected_method=method,
+        expected_seed=seed,
+    )
     dataset = EncodedSSTDataset.from_jsonl(data_dir / "test.jsonl")
     loader = _make_loader(
         dataset,
@@ -416,6 +479,7 @@ def evaluate_saved_run(
     )
     metrics = evaluate_model(model, loader, device, nn.CrossEntropyLoss())
     return {
+        "method": method,
         "seed": seed,
         "best_epoch": checkpoint["epoch"],
         "test": metrics,

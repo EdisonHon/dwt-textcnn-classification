@@ -53,16 +53,16 @@ dwt-textcnn summarize --help
 ```
 
 Method configurations inherit the fixed experiment protocol from
-`configs/base.yaml`. They can be resolved and validated before the relevant
-implementation phase is complete:
+`configs/base.yaml`. They can be resolved and validated independently:
 
 ```powershell
 dwt-textcnn train --config configs/original.yaml --check-config
 dwt-textcnn train --config configs/dwt_ca.yaml --check-config
 ```
 
-Operations that belong to later phases currently report that status explicitly
-instead of presenting placeholder output as an experiment result.
+The `benchmark` and `summarize` operations belong to later phases and currently
+report that status explicitly instead of presenting placeholder output as an
+experiment result.
 
 Prepare SST-2 from either the untouched 2013 archive or its extracted `trees`
 directory:
@@ -110,17 +110,20 @@ uses full SVD and is fitted once on unique Train token IDs that matched
 Word2Vec. Use `--original-cache-root` when the Original caches are not in their
 default location. Existing outputs remain protected unless `--force` is given.
 
-Train one Original MCCNN seed and save the best Dev Accuracy checkpoint:
+Train any one MCCNN method and save the best Dev Accuracy checkpoint:
 
 ```powershell
 dwt-textcnn train --config configs/original.yaml --seed 13 --device auto
+dwt-textcnn train --config configs/dwt_ca.yaml --seed 13 --device auto
+dwt-textcnn train --config configs/dwt_cd.yaml --seed 13 --device auto
+dwt-textcnn train --config configs/pca.yaml --seed 13 --device auto
 ```
 
 For an explicit development smoke run, `--max-epochs` and
 `--limit-train-batches` are available and the saved metrics are marked as
 `run_kind: smoke`. A normal run writes the resolved configuration, environment,
 data and embedding manifests, training history, metrics, model-size profile,
-and best checkpoint under `outputs/sst2/original/<seed>/<run-id>`.
+and best checkpoint under `outputs/sst2/<method>/<seed>/<run-id>`.
 
 Re-evaluate a saved best checkpoint without retraining:
 
@@ -130,6 +133,17 @@ dwt-textcnn evaluate `
   --run-dir outputs\sst2\original\13\<run-id> `
   --device auto
 ```
+
+The phase-6 seed-13 end-to-end validation produced the following preliminary
+results on the checked RTX 4080 SUPER environment. They verify the pipeline and
+must not be interpreted as the final multi-seed comparison:
+
+| Method | Best epoch | Test accuracy | Macro-F1 | Parameters |
+| --- | ---: | ---: | ---: | ---: |
+| Original | 8 | 82.21% | 82.20% | 10,311,302 |
+| DWT-cA | 5 | 81.71% | 81.71% | 5,156,102 |
+| DWT-cD | 5 | 82.81% | 82.81% | 5,156,102 |
+| PCA | 5 | 82.21% | 82.19% | 5,156,102 |
 
 ## Development checks
 

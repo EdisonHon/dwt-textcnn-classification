@@ -234,15 +234,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "train":
-        if config["embedding"]["method"] != "original":
-            parser.error("Phase 4 training supports configs/original.yaml only")
+        method = config["embedding"]["method"]
         seed = args.seed if args.seed is not None else config["experiment"]["seeds"][0]
         prepared_data_dir = args.prepared_data_dir or Path(
             config["paths"]["prepared_data_dir"]
         )
         embedding_cache_dir = args.embedding_cache_dir or (
             Path(config["paths"]["prepared_embedding_dir"])
-            / "original"
+            / method
             / f"seed_{seed}"
         )
         output_root = args.output_root or Path(config["paths"]["output_dir"])
