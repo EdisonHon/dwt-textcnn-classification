@@ -64,6 +64,21 @@ dwt-textcnn train --config configs/dwt_ca.yaml --check-config
 Operations that belong to later phases currently report that status explicitly
 instead of presenting placeholder output as an experiment result.
 
+Prepare SST-2 from either the untouched 2013 archive or its extracted `trees`
+directory:
+
+```powershell
+dwt-textcnn prepare-data `
+  --source C:\path\to\trainDevTestTrees_PTB.zip `
+  --output-dir data\processed\sst2
+```
+
+The command verifies the archive and split checksums, retains only binary root
+sentences, builds the 16,284-entry train-only vocabulary, maps unseen Dev/Test
+tokens to `<unk>`, and writes deterministic JSONL files plus
+`data_manifest.json`. Existing artifacts are protected unless `--force` is
+provided.
+
 ## Development checks
 
 Run the test suite from the repository root:

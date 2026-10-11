@@ -28,6 +28,7 @@ def test_method_configs_resolve_and_validate(
     assert config["embedding"]["dimension"] == dimension
     assert config["model"]["kernel_sizes"] == [5, 6, 7]
     assert config["experiment"]["seeds"] == [13, 21, 42, 87, 100]
+    assert config["data"]["vocabulary_scope"] == "train-only"
     assert "extends" not in config
 
 

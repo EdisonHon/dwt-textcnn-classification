@@ -90,6 +90,17 @@ def validate_config(config: Mapping[str, Any]) -> None:
         )
 
     checks = {
+        "data.source_url": "https://nlp.stanford.edu/sentiment/trainDevTestTrees_PTB.zip",
+        "data.archive_sha256": "5c613a4f673fc74097d523a2c83f38e0cc462984d847b82c7aaf36b01cbbbfcc",
+        "data.split_sha256.train": "e2f3f41b0b1e6d4dddc0effe3bfc2d27ed8928079aa9a03d652311614fc5feb7",
+        "data.split_sha256.dev": "0e9336aed6e4730e19f58d00a77b3f0297efdb755f7b5e598c98a05e3f97ea40",
+        "data.split_sha256.test": "6e54806dee95cf80cd918e7dfb3f6770f6df24bf826f289a4d1f709e1c8f6761",
+        "data.expected_binary_counts.train": 6920,
+        "data.expected_binary_counts.dev": 872,
+        "data.expected_binary_counts.test": 1821,
+        "data.vocabulary_scope": "train-only",
+        "data.special_tokens.pad": "<pad>",
+        "data.special_tokens.unk": "<unk>",
         "data.minimum_sequence_length": 7,
         "model.kernel_sizes": [5, 6, 7],
         "model.filters_per_size": 100,

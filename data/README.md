@@ -14,3 +14,7 @@ Expected external inputs include:
 
 Preparation commands must record the source, version or commit, file size, and
 checksum of every external input.
+
+`prepare-data` writes deterministic encoded splits, the train-only vocabulary,
+and `data_manifest.json` under `data/processed/sst2` by default. These generated
+artifacts remain local and are not committed.
