@@ -18,3 +18,6 @@ checksum of every external input.
 `prepare-data` writes deterministic encoded splits, the train-only vocabulary,
 and `data_manifest.json` under `data/processed/sst2` by default. These generated
 artifacts remain local and are not committed.
+
+`prepare-embeddings` writes seed-specific Original matrices, Word2Vec match
+masks, and embedding manifests under `data/processed/embeddings/original`.

@@ -115,6 +115,12 @@ def validate_config(config: Mapping[str, Any]) -> None:
         "training.early_stopping.metric": "accuracy",
         "training.early_stopping.patience": 5,
         "experiment.seeds": [13, 21, 42, 87, 100],
+        "embedding.dtype": "float32",
+        "embedding.word2vec_md5": "a5e5354d40acb95f9ec66d5977d140ef",
+        "embedding.word2vec_sha256": "cdd97c3b73abcd8e1437ad3837b8faf98fc21258f61f031721fe3e2096ed89d9",
+        "embedding.oov_initialization.distribution": "uniform",
+        "embedding.oov_initialization.low": -0.25,
+        "embedding.oov_initialization.high": 0.25,
     }
     for key, expected in checks.items():
         actual = _get(config, key)

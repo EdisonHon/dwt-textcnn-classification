@@ -9,6 +9,7 @@ from typing import Sequence
 
 from dwt_textcnn.config import ConfigError, load_config
 from dwt_textcnn.data import DataPreparationError, prepare_sst_data
+from dwt_textcnn.embeddings import EmbeddingPreparationError, prepare_original_embeddings
 
 
 COMMAND_PHASES = {
@@ -28,11 +29,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
     for command, phase in COMMAND_PHASES.items():
-        command_help = (
-            "Prepare and validate the fixed 2013 SST-2 dataset."
-            if command == "prepare-data"
-            else f"Project operation implemented in {phase}."
-        )
+        if command == "prepare-data":
+            command_help = "Prepare and validate the fixed 2013 SST-2 dataset."
+        elif command == "prepare-embeddings":
+            command_help = "Prepare deterministic embedding caches."
+        else:
+            command_help = f"Project operation implemented in {phase}."
         subparser = subparsers.add_parser(
             command,
             help=command_help,
@@ -65,6 +67,33 @@ def build_parser() -> argparse.ArgumentParser:
                 "--force",
                 action="store_true",
                 help="Replace existing prepared artifacts after all validation succeeds.",
+            )
+        if command == "prepare-embeddings":
+            subparser.add_argument(
+                "--word2vec",
+                type=Path,
+                help="Google News Word2Vec binary or compressed binary path.",
+            )
+            subparser.add_argument(
+                "--prepared-data-dir",
+                type=Path,
+                help="Directory containing vocabulary.json and data_manifest.json.",
+            )
+            subparser.add_argument(
+                "--output-dir",
+                type=Path,
+                help="Original cache directory (defaults under paths.prepared_embedding_dir).",
+            )
+            subparser.add_argument(
+                "--seed",
+                type=int,
+                action="append",
+                help="Seed to prepare; repeat for multiple seeds (default: all configured seeds).",
+            )
+            subparser.add_argument(
+                "--force",
+                action="store_true",
+                help="Replace existing caches after validation succeeds.",
             )
     return parser
 
@@ -105,6 +134,49 @@ def main(argv: Sequence[str] | None = None) -> int:
             },
             "vocabulary_size": manifest["vocabulary"]["size"],
             "vocabulary_sha256": manifest["vocabulary"]["sha256"],
+        }
+        print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "prepare-embeddings":
+        if config["embedding"]["method"] != "original":
+            parser.error(
+                "DWT and PCA cache preparation is deferred to phase 5; "
+                "use configs/original.yaml or configs/base.yaml in phase 3"
+            )
+        word2vec_path = args.word2vec or config["embedding"].get("word2vec_path")
+        if word2vec_path is None:
+            parser.error(
+                "prepare-embeddings requires --word2vec or a non-null embedding.word2vec_path"
+            )
+        prepared_data_dir = args.prepared_data_dir or Path(
+            config["paths"]["prepared_data_dir"]
+        )
+        output_dir = args.output_dir or (
+            Path(config["paths"]["prepared_embedding_dir"]) / "original"
+        )
+        seeds = args.seed or config["experiment"]["seeds"]
+        try:
+            manifests = prepare_original_embeddings(
+                word2vec_path=word2vec_path,
+                prepared_data_dir=prepared_data_dir,
+                output_dir=output_dir,
+                seeds=seeds,
+                config=config,
+                force=args.force,
+            )
+        except (EmbeddingPreparationError, OSError) as exc:
+            parser.error(str(exc))
+        first = manifests[0]
+        summary = {
+            "output_dir": str(Path(output_dir).expanduser().resolve()),
+            "seeds": [manifest["seed"] for manifest in manifests],
+            "shape": first["shape"],
+            "matched_lexical_token_count": first["coverage"][
+                "matched_lexical_token_count"
+            ],
+            "oov_lexical_token_count": first["coverage"]["oov_lexical_token_count"],
+            "matched_lexical_rate": first["coverage"]["matched_lexical_rate"],
         }
         print(json.dumps(summary, indent=2, sort_keys=True))
         return 0

@@ -30,6 +30,11 @@ embedding:
   dtype: float32
   word2vec_path: null
   word2vec_md5: a5e5354d40acb95f9ec66d5977d140ef
+  word2vec_sha256: cdd97c3b73abcd8e1437ad3837b8faf98fc21258f61f031721fe3e2096ed89d9
+  oov_initialization:
+    distribution: uniform
+    low: -0.25
+    high: 0.25
   pretrained_trainable: true
   random_trainable: true
   dwt:
@@ -67,4 +72,5 @@ evaluation:
 paths:
   data_dir: data
   prepared_data_dir: data/processed/sst2
+  prepared_embedding_dir: data/processed/embeddings
   output_dir: outputs

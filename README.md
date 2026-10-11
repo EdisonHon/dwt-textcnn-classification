@@ -79,6 +79,22 @@ tokens to `<unk>`, and writes deterministic JSONL files plus
 `data_manifest.json`. Existing artifacts are protected unless `--force` is
 provided.
 
+After data preparation, extract the train vocabulary from Google News Word2Vec
+and create one reproducible Original cache for each configured experiment seed:
+
+```powershell
+dwt-textcnn prepare-embeddings `
+  --config configs/original.yaml `
+  --word2vec C:\path\to\word2vec-google-news-300.gz
+```
+
+The command verifies both MD5 and SHA-256 before loading the vectors. Exact
+token matches retain their pretrained vectors; lexical OOV tokens and `<unk>`
+use seed-controlled `Uniform(-0.25, 0.25)` vectors, while `<pad>` remains zero.
+Use one or more `--seed` arguments to prepare a subset of the configured seeds.
+Original caches are written below `data/processed/embeddings/original` by
+default and are excluded from Git.
+
 ## Development checks
 
 Run the test suite from the repository root:

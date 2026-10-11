@@ -29,6 +29,11 @@ def test_method_configs_resolve_and_validate(
     assert config["model"]["kernel_sizes"] == [5, 6, 7]
     assert config["experiment"]["seeds"] == [13, 21, 42, 87, 100]
     assert config["data"]["vocabulary_scope"] == "train-only"
+    assert config["embedding"]["oov_initialization"] == {
+        "distribution": "uniform",
+        "low": -0.25,
+        "high": 0.25,
+    }
     assert "extends" not in config
 
 
