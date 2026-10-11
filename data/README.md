@@ -21,3 +21,6 @@ artifacts remain local and are not committed.
 
 `prepare-embeddings` writes seed-specific Original matrices, Word2Vec match
 masks, and embedding manifests under `data/processed/embeddings/original`.
+The DWT-cA, DWT-cD, and PCA commands derive 150-dimensional caches under the
+corresponding method directory from those exact seed-specific matrices. PCA
+model arrays and their fit-scope manifest live at the root of the PCA cache.

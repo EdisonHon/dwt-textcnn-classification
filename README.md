@@ -95,6 +95,21 @@ Use one or more `--seed` arguments to prepare a subset of the configured seeds.
 Original caches are written below `data/processed/embeddings/original` by
 default and are excluded from Git.
 
+Create the 150-dimensional DWT and PCA caches from those verified Original
+caches (the Word2Vec source is not loaded again):
+
+```powershell
+dwt-textcnn prepare-embeddings --config configs/dwt_ca.yaml
+dwt-textcnn prepare-embeddings --config configs/dwt_cd.yaml
+dwt-textcnn prepare-embeddings --config configs/pca.yaml
+```
+
+Each compressed seed inherits its exact Original matrix, Word2Vec match mask,
+and vocabulary identity. DWT uses one-level `coif1` with `periodization`; PCA
+uses full SVD and is fitted once on unique Train token IDs that matched
+Word2Vec. Use `--original-cache-root` when the Original caches are not in their
+default location. Existing outputs remain protected unless `--force` is given.
+
 Train one Original MCCNN seed and save the best Dev Accuracy checkpoint:
 
 ```powershell

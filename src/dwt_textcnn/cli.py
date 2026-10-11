@@ -9,7 +9,11 @@ from typing import Sequence
 
 from dwt_textcnn.config import ConfigError, load_config
 from dwt_textcnn.data import DataPreparationError, prepare_sst_data
-from dwt_textcnn.embeddings import EmbeddingPreparationError, prepare_original_embeddings
+from dwt_textcnn.embeddings import (
+    EmbeddingPreparationError,
+    prepare_compressed_embeddings,
+    prepare_original_embeddings,
+)
 from dwt_textcnn.training import TrainingError, evaluate_saved_run, train_experiment
 
 
@@ -87,7 +91,12 @@ def build_parser() -> argparse.ArgumentParser:
             subparser.add_argument(
                 "--output-dir",
                 type=Path,
-                help="Original cache directory (defaults under paths.prepared_embedding_dir).",
+                help="Method cache directory (defaults under paths.prepared_embedding_dir).",
+            )
+            subparser.add_argument(
+                "--original-cache-root",
+                type=Path,
+                help="Original seed cache root required by DWT and PCA methods.",
             )
             subparser.add_argument(
                 "--seed",
@@ -172,32 +181,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     if args.command == "prepare-embeddings":
-        if config["embedding"]["method"] != "original":
-            parser.error(
-                "DWT and PCA cache preparation is deferred to phase 5; "
-                "use configs/original.yaml or configs/base.yaml in phase 3"
-            )
-        word2vec_path = args.word2vec or config["embedding"].get("word2vec_path")
-        if word2vec_path is None:
-            parser.error(
-                "prepare-embeddings requires --word2vec or a non-null embedding.word2vec_path"
-            )
+        method = config["embedding"]["method"]
         prepared_data_dir = args.prepared_data_dir or Path(
             config["paths"]["prepared_data_dir"]
         )
         output_dir = args.output_dir or (
-            Path(config["paths"]["prepared_embedding_dir"]) / "original"
+            Path(config["paths"]["prepared_embedding_dir"]) / method
         )
         seeds = args.seed or config["experiment"]["seeds"]
         try:
-            manifests = prepare_original_embeddings(
-                word2vec_path=word2vec_path,
-                prepared_data_dir=prepared_data_dir,
-                output_dir=output_dir,
-                seeds=seeds,
-                config=config,
-                force=args.force,
-            )
+            if method == "original":
+                word2vec_path = args.word2vec or config["embedding"].get("word2vec_path")
+                if word2vec_path is None:
+                    parser.error(
+                        "Original preparation requires --word2vec or "
+                        "a non-null embedding.word2vec_path"
+                    )
+                manifests = prepare_original_embeddings(
+                    word2vec_path=word2vec_path,
+                    prepared_data_dir=prepared_data_dir,
+                    output_dir=output_dir,
+                    seeds=seeds,
+                    config=config,
+                    force=args.force,
+                )
+            else:
+                original_root = args.original_cache_root or (
+                    Path(config["paths"]["prepared_embedding_dir"]) / "original"
+                )
+                manifests = prepare_compressed_embeddings(
+                    original_cache_root=original_root,
+                    prepared_data_dir=prepared_data_dir,
+                    output_dir=output_dir,
+                    seeds=seeds,
+                    config=config,
+                    force=args.force,
+                )
         except (EmbeddingPreparationError, OSError) as exc:
             parser.error(str(exc))
         first = manifests[0]
