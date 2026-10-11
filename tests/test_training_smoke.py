@@ -14,6 +14,7 @@ from dwt_textcnn.embeddings import (
     prepare_compressed_embeddings,
     prepare_original_embeddings,
 )
+from dwt_textcnn.profiling import benchmark_saved_run
 from dwt_textcnn.training import evaluate_saved_run, train_experiment
 from dwt_textcnn.vocabulary import Vocabulary
 
@@ -139,6 +140,12 @@ def test_training_evaluation_checkpoint_and_result_files(
         limit_train_batches=1,
     )
     reevaluated = evaluate_saved_run(run_dir, device_name="cpu")
+    benchmark = benchmark_saved_run(
+        run_dir,
+        device_name="cpu",
+        warmup_iterations=0,
+        measured_iterations=2,
+    )
 
     expected_files = {
         "config.yaml",
@@ -160,3 +167,6 @@ def test_training_evaluation_checkpoint_and_result_files(
     assert profile["embedding_dimension"] == config["embedding"]["dimension"]
     assert profile["parameters"]["total_parameters"] > 0
     assert profile["parameter_bytes"]["total_parameter_bytes"] > 0
+    assert profile["status"] == "benchmarked"
+    assert benchmark["protocol"]["batch_size"] == 2
+    assert benchmark["throughput_samples_per_second"] > 0

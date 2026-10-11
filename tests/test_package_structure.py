@@ -17,6 +17,7 @@ import pytest
         "dwt_textcnn.training",
         "dwt_textcnn.evaluation",
         "dwt_textcnn.profiling",
+        "dwt_textcnn.reporting",
         "dwt_textcnn.reproducibility",
     ],
 )

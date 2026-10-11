@@ -60,9 +60,9 @@ dwt-textcnn train --config configs/original.yaml --check-config
 dwt-textcnn train --config configs/dwt_ca.yaml --check-config
 ```
 
-The `benchmark` and `summarize` operations belong to later phases and currently
-report that status explicitly instead of presenting placeholder output as an
-experiment result.
+All six operations are implemented. Benchmarking updates the saved run's
+profile, while summarization requires one exact run ID shared by the complete
+four-method, five-seed matrix.
 
 Prepare SST-2 from either the untouched 2013 archive or its extracted `trees`
 directory:
@@ -134,16 +134,17 @@ dwt-textcnn evaluate `
   --device auto
 ```
 
-The phase-6 seed-13 end-to-end validation produced the following preliminary
-results on the checked RTX 4080 SUPER environment. They verify the pipeline and
-must not be interpreted as the final multi-seed comparison:
+The completed five-seed experiment matrix produced the following test results:
 
-| Method | Best epoch | Test accuracy | Macro-F1 | Parameters |
-| --- | ---: | ---: | ---: | ---: |
-| Original | 8 | 82.21% | 82.20% | 10,311,302 |
-| DWT-cA | 5 | 81.71% | 81.71% | 5,156,102 |
-| DWT-cD | 5 | 82.81% | 82.81% | 5,156,102 |
-| PCA | 5 | 82.21% | 82.19% | 5,156,102 |
+| Method | Test accuracy (mean ± sample std) | Macro-F1 | Parameters |
+| --- | ---: | ---: | ---: |
+| Original | 81.68% ± 0.90% | 81.66% ± 0.92% | 10,311,302 |
+| DWT-cA | 80.65% ± 1.29% | 80.63% ± 1.31% | 5,156,102 |
+| DWT-cD | 81.04% ± 1.46% | 81.01% ± 1.47% | 5,156,102 |
+| PCA | 81.33% ± 0.83% | 81.25% ± 0.89% | 5,156,102 |
+
+See [`RESULTS.md`](RESULTS.md) for the full classification, model-size,
+training-time, inference, memory, and reproducibility report.
 
 ## Development checks
 

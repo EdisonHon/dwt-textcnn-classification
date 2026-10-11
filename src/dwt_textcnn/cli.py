@@ -14,6 +14,8 @@ from dwt_textcnn.embeddings import (
     prepare_compressed_embeddings,
     prepare_original_embeddings,
 )
+from dwt_textcnn.profiling import BenchmarkError, benchmark_saved_run
+from dwt_textcnn.reporting import SummaryError, summarize_experiments
 from dwt_textcnn.training import TrainingError, evaluate_saved_run, train_experiment
 
 
@@ -137,6 +139,36 @@ def build_parser() -> argparse.ArgumentParser:
             subparser.add_argument(
                 "--device", default="auto", help="PyTorch device (default: auto)."
             )
+        if command == "benchmark":
+            subparser.add_argument(
+                "--run-dir", type=Path, required=True, help="Saved run directory."
+            )
+            subparser.add_argument(
+                "--device", default="auto", help="PyTorch device (default: auto)."
+            )
+            subparser.add_argument(
+                "--warmup-iterations", type=int, default=20
+            )
+            subparser.add_argument(
+                "--measured-iterations", type=int, default=100
+            )
+        if command == "summarize":
+            subparser.add_argument(
+                "--run-id",
+                required=True,
+                help="Exact run ID shared by all methods and seeds.",
+            )
+            subparser.add_argument(
+                "--output-root",
+                type=Path,
+                help="Experiment output root (defaults to paths.output_dir).",
+            )
+            subparser.add_argument(
+                "--summary-dir",
+                type=Path,
+                help="Destination (defaults to outputs/sst2/summary/<run-id>).",
+            )
+            subparser.add_argument("--force", action="store_true")
     return parser
 
 
@@ -282,9 +314,50 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
 
-    phase = COMMAND_PHASES[args.command]
-    print(
-        f"'{args.command}' is registered but its execution is intentionally deferred to {phase}. "
-        "Use --check-config to validate configuration now."
-    )
+    if args.command == "benchmark":
+        try:
+            result = benchmark_saved_run(
+                args.run_dir,
+                device_name=args.device,
+                warmup_iterations=args.warmup_iterations,
+                measured_iterations=args.measured_iterations,
+            )
+        except (BenchmarkError, OSError) as exc:
+            parser.error(str(exc))
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "summarize":
+        output_root = args.output_root or Path(config["paths"]["output_dir"])
+        summary_dir = args.summary_dir or (
+            Path(output_root)
+            / config["project"]["dataset"]
+            / "summary"
+            / args.run_id
+        )
+        try:
+            result = summarize_experiments(
+                config,
+                output_root=output_root,
+                run_id=args.run_id,
+                summary_dir=summary_dir,
+                force=args.force,
+            )
+        except (SummaryError, OSError) as exc:
+            parser.error(str(exc))
+        print(
+            json.dumps(
+                {
+                    "summary_dir": str(Path(summary_dir).expanduser().resolve()),
+                    "run_count": len(result["runs"]),
+                    "methods": result["methods"],
+                    "seeds": result["seeds"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    parser.error(f"Unhandled command: {args.command}")
     return 2
