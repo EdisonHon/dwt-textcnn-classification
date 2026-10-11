@@ -34,6 +34,14 @@ def test_method_configs_resolve_and_validate(
         "low": -0.25,
         "high": 0.25,
     }
+    assert config["model"]["shared_channel_filters"] is True
+    assert config["model"]["channel_merge"] == "sum-after-relu"
+    assert config["model"]["initialization"] == {
+        "distribution": "truncated-normal",
+        "mean": 0.0,
+        "std": 0.1,
+        "bias": 0.0,
+    }
     assert "extends" not in config
 
 

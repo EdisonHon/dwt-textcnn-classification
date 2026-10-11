@@ -119,11 +119,11 @@ MCCNN 使用两个相同维度的 lookup table：
 token ids
   -> pretrained embedding channel
   -> random embedding channel
-  -> parallel convolutions over both channels
+  -> shared convolutions applied to each channel
      kernel widths: 5, 6, 7
      filters per width: 100
-  -> merge corresponding channel features
-  -> ReLU
+  -> ReLU on each channel feature map
+  -> sum corresponding channel feature maps
   -> max-over-time pooling
   -> concatenate 300 pooled features
   -> dropout
@@ -138,6 +138,9 @@ token ids
 - Dropout：0.5；
 - 输出类别数：2；
 - 损失函数：交叉熵。
+- 共享卷积 filter 按论文公式分别作用于两个通道，每个通道独立经过 bias 和 ReLU 后再求和；
+- 随机嵌入通道、卷积权重和分类器权重使用零均值截断正态初始化；由于论文遗漏标准差数值，本项目固定 `std=0.1`，bias 初始化为零；
+- 两个嵌入通道在每次参数更新后都将 `<pad>` 行强制重设为零。
 
 嵌入维度从 300 降到 150 时，卷积层的参数量也会随之减少。这是压缩带来的实际模型规模收益，报告时必须把嵌入矩阵、卷积分类器和完整模型的参数量分别列出。
 
@@ -427,6 +430,7 @@ outputs/sst2/<method>/<seed>/<run-id>/
 
 - CNN 论文没有完整公开所有训练和初始化细节，无法保证数值完全一致；
 - CNN 论文未提供可直接复现的随机初始化标准差；本项目将 OOV 初始化固定为 `Uniform(-0.25, 0.25)` 并记录到 manifest；
+- 对论文未给出的截断正态标准差，本项目固定使用 `std=0.1` 并记录到配置和运行结果；
 - DWT 论文没有公开每项实验的具体母小波，`coif1` 是本项目固定选择；
 - 后续维护的 Stanford SST Git 仓库与 2013 原始发布包存在样本差异；本项目固定使用原始发布包，不自动跟随仓库更新；
 - 两个嵌入通道均训练可能逐步改变初始压缩表示，但所有方法保持一致；

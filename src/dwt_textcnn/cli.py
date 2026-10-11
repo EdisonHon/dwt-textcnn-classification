@@ -10,6 +10,7 @@ from typing import Sequence
 from dwt_textcnn.config import ConfigError, load_config
 from dwt_textcnn.data import DataPreparationError, prepare_sst_data
 from dwt_textcnn.embeddings import EmbeddingPreparationError, prepare_original_embeddings
+from dwt_textcnn.training import TrainingError, evaluate_saved_run, train_experiment
 
 
 COMMAND_PHASES = {
@@ -33,6 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
             command_help = "Prepare and validate the fixed 2013 SST-2 dataset."
         elif command == "prepare-embeddings":
             command_help = "Prepare deterministic embedding caches."
+        elif command == "train":
+            command_help = "Train one MCCNN experiment and save its best checkpoint."
+        elif command == "evaluate":
+            command_help = "Re-evaluate the test split for a saved run."
         else:
             command_help = f"Project operation implemented in {phase}."
         subparser = subparsers.add_parser(
@@ -94,6 +99,34 @@ def build_parser() -> argparse.ArgumentParser:
                 "--force",
                 action="store_true",
                 help="Replace existing caches after validation succeeds.",
+            )
+        if command == "train":
+            subparser.add_argument("--seed", type=int, help="Experiment seed.")
+            subparser.add_argument("--prepared-data-dir", type=Path)
+            subparser.add_argument("--embedding-cache-dir", type=Path)
+            subparser.add_argument(
+                "--output-root",
+                type=Path,
+                help="Root for outputs/sst2/<method>/<seed>/<run-id>.",
+            )
+            subparser.add_argument(
+                "--device", default="auto", help="PyTorch device (default: auto)."
+            )
+            subparser.add_argument("--run-id", help="Optional unique run directory name.")
+            subparser.add_argument(
+                "--max-epochs", type=int, help="Smoke-test override for maximum epochs."
+            )
+            subparser.add_argument(
+                "--limit-train-batches",
+                type=int,
+                help="Smoke-test override for train batches per epoch.",
+            )
+        if command == "evaluate":
+            subparser.add_argument(
+                "--run-dir", type=Path, required=True, help="Saved run directory."
+            )
+            subparser.add_argument(
+                "--device", default="auto", help="PyTorch device (default: auto)."
             )
     return parser
 
@@ -179,6 +212,56 @@ def main(argv: Sequence[str] | None = None) -> int:
             "matched_lexical_rate": first["coverage"]["matched_lexical_rate"],
         }
         print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "train":
+        if config["embedding"]["method"] != "original":
+            parser.error("Phase 4 training supports configs/original.yaml only")
+        seed = args.seed if args.seed is not None else config["experiment"]["seeds"][0]
+        prepared_data_dir = args.prepared_data_dir or Path(
+            config["paths"]["prepared_data_dir"]
+        )
+        embedding_cache_dir = args.embedding_cache_dir or (
+            Path(config["paths"]["prepared_embedding_dir"])
+            / "original"
+            / f"seed_{seed}"
+        )
+        output_root = args.output_root or Path(config["paths"]["output_dir"])
+        try:
+            run_dir, metrics = train_experiment(
+                config,
+                seed=seed,
+                prepared_data_dir=prepared_data_dir,
+                embedding_cache_dir=embedding_cache_dir,
+                output_root=output_root,
+                device_name=args.device,
+                run_id=args.run_id,
+                max_epochs=args.max_epochs,
+                limit_train_batches=args.limit_train_batches,
+            )
+        except (TrainingError, OSError) as exc:
+            parser.error(str(exc))
+        print(
+            json.dumps(
+                {
+                    "run_dir": str(run_dir),
+                    "best_epoch": metrics["best_epoch"],
+                    "dev_accuracy": metrics["dev"]["accuracy"],
+                    "test_accuracy": metrics["test"]["accuracy"],
+                    "test_macro_f1": metrics["test"]["macro_f1"],
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    if args.command == "evaluate":
+        try:
+            result = evaluate_saved_run(args.run_dir, device_name=args.device)
+        except (TrainingError, OSError) as exc:
+            parser.error(str(exc))
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
 
     phase = COMMAND_PHASES[args.command]

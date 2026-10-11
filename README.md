@@ -95,6 +95,27 @@ Use one or more `--seed` arguments to prepare a subset of the configured seeds.
 Original caches are written below `data/processed/embeddings/original` by
 default and are excluded from Git.
 
+Train one Original MCCNN seed and save the best Dev Accuracy checkpoint:
+
+```powershell
+dwt-textcnn train --config configs/original.yaml --seed 13 --device auto
+```
+
+For an explicit development smoke run, `--max-epochs` and
+`--limit-train-batches` are available and the saved metrics are marked as
+`run_kind: smoke`. A normal run writes the resolved configuration, environment,
+data and embedding manifests, training history, metrics, model-size profile,
+and best checkpoint under `outputs/sst2/original/<seed>/<run-id>`.
+
+Re-evaluate a saved best checkpoint without retraining:
+
+```powershell
+dwt-textcnn evaluate `
+  --config configs/original.yaml `
+  --run-dir outputs\sst2\original\13\<run-id> `
+  --device auto
+```
+
 ## Development checks
 
 Run the test suite from the repository root:
